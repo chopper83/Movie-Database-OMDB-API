@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+    <link rel="stylesheet" href="/styles/search.css">
+</head>
+<body>
+    <header>
+        <div class="home-button">
+            <a href="/">Home</a>
+        </div>
+        <h1>Search Results</h1>
+    </header>
+    
+    <div class="search-container">
+        <form action="/search" method="get">
+            <input type="text" name="title" placeholder="Search for a movie or a show...">
+            <button type="submit">Search</button>
+        </form>
+    </div>
+    
+    <div class="movie-container">
+        <% movies.forEach((movie)=> { %>
+            <div class="movie">
+                <img src="<%= movie.Poster %>" alt="Movie Poster">
+                <div class="movie-details">
+                    <h2><%= movie.Title %></h2>
+                    <p><%= movie.Plot %></p>
+                    
+                    <div class="rating" data-rating="<%= movie.Rating %>">
+                        <% for (let i = 1; i <= 5; i++) { %>
+                            <% if (i <= movie.Rating) { %>
+                                <span class="star checked" data-value="<%= i %>">★</span>
+                            <% } else { %>
+                                <span class="star" data-value="<%= i %>">★</span>
+                            <% } %>
+                        <% } %>
+                    </div>
+
+                    <div class="review">
+                        <h3>Review:</h3>
+                        <p><%= movie.Review ? movie.Review : "No review yet." %></p>
+                    </div>
+                    
+                    <form class="review-form" onsubmit="return submitReviewForm(event, this)">
+                        <input type="hidden" name="id" value="<%= movie.imdbID %>">
+                        <input type="hidden" name="rating" value="<%= movie.Rating %>">
+                        <textarea name="review" placeholder="Write your review here..."><%= movie.Review ? movie.Review : '' %></textarea>
+                        
+                       
+                        
+                        <button type="submit"><%= movie.Review ? "Edit Review" : "Post Review" %></button>
+                    </form>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+
+    <script>
+        function validateForm(form) {
+            const rating = form.querySelector('input[name="rating"]').value;
+            if (!rating || rating === "0") {
+                alert('Please select a rating.');
+                return false;
+            }
+            return true;
+        }
+
+        function submitReviewForm(event, form) {
+            event.preventDefault();
+            if (!validateForm(form)) return false;
+
+            const formData = new FormData(form);
+            const formObject = Object.fromEntries(formData.entries());
+            const jsonString = JSON.stringify(formObject);
+
+            fetch('/edit-review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: jsonString
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Review successfully saved.');
+                    location.reload();
+                } else {
+                    alert('Error saving review.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+
+            return false;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const movies = document.querySelectorAll('.movie');
+
+            movies.forEach(movie => {
+                const ratingContainer = movie.querySelector('.rating');
+                const stars = [...ratingContainer.querySelectorAll('.star')];
+                const ratingFormInput = movie.querySelector('input[name="rating"]');
+
+                stars.forEach(star => {
+                    const starValue = parseInt(star.getAttribute('data-value'), 10);
+
+                    if (starValue <= parseInt(ratingContainer.getAttribute('data-rating'), 10)) {
+                        star.classList.add('checked');
+                    }
+
+                    star.addEventListener('click', function() {
+                        const newRating = starValue;
+                        ratingContainer.setAttribute('data-rating', newRating);
+                        ratingFormInput.value = newRating;
+
+                        stars.forEach(s => {
+                            const sValue = parseInt(s.getAttribute('data-value'), 10);
+                            if (sValue <= newRating) {
+                                s.classList.add('checked');
+                            } else {
+                                s.classList.remove('checked');
+                            }
+                        });
+                    });
+
+                    star.addEventListener('mouseover', function() {
+                        stars.forEach(s => {
+                            const sValue = parseInt(s.getAttribute('data-value'), 10);
+                            if (sValue <= starValue) {
+                                s.classList.add('hovered');
+                            } else {
+                                s.classList.remove('hovered');
+                            }
+                        });
+                    });
+
+                    star.addEventListener('mouseout', function() {
+                        stars.forEach(s => s.classList.remove('hovered'));
+                    });
+                });
+            });
+        });
+    </script>
+
+    <footer>
+        SAK56 &copy; 2024
+    </footer>
+</body>
+</html>
